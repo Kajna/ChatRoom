@@ -35,6 +35,8 @@ public:
 
 	bool setBlocking();
 	bool setNonBlocking();
+
+	int getLastErrorCode();
 protected:
     int socketFd_;
     bool isClosed_;

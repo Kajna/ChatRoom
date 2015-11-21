@@ -85,3 +85,8 @@ bool BaseSocket::isClosed()
     }
     return isClosed_;
 }
+
+int BaseSocket::getLastErrorCode()
+{
+    return errno;
+}
