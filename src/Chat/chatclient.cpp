@@ -20,31 +20,28 @@ ChatClient::ChatClient(string server, string port) : runSignal_(true)
     server_ = server;
     port_ = port;
 
-    clientSocket_ = new TCPSocket();
-
-    clientSocket_->connectWithTimeout(server.c_str(), port.c_str(), 5, 5);
+    clientSocket_.connectWithTimeout(server.c_str(), port.c_str(), 5, 0);
 }
 
 ChatClient::~ChatClient()
 {
     if (runSignal_) {
         exitMutex_.lock();
-        clientSocket_->sendString(EXIT_CHAT_CMD);
-        clientSocket_->close();
+        clientSocket_.sendString(EXIT_CHAT_CMD);
+        clientSocket_.close();
         runSignal_ = false;
         exitMutex_.unlock();
-        delete clientSocket_;
     }
 }
 
 bool ChatClient::login(string user, string pass)
 {
-    // Store user name password and send greet msg
+    // Store user name password
     username_ = user;
     pass_ = pass;
 
-    // Login
-    clientSocket_->sendString(username_);
+    // Send greeting message
+    clientSocket_.sendString(username_);
 
     // Start threads
     displayThread_.start(&doDisplay, this);
@@ -55,14 +52,14 @@ bool ChatClient::login(string user, string pass)
     writeThread_.join();
     displayThread_.join();
 
-    clientSocket_->close();
+    clientSocket_.close();
 
     displayMessage("---------------------------\nConnection to server closed\n---------------------------\n");
 }
 
 void ChatClient::logout()
 {
-    clientSocket_->sendString(EXIT_CHAT_CMD);
+    clientSocket_.sendString(EXIT_CHAT_CMD);
     exitMutex_.lock();
     runSignal_ = false;
     exitMutex_.unlock();
@@ -73,10 +70,7 @@ void* ChatClient::displayLoop()
     string msg;
     while (runSignal_) {
         if (!messageQueue_.empty()) {
-            msg = messageQueue_.front();
-            if (!isSameMessage(msg)) {
-                displayMessage(msg);
-            }
+            displayMessage(messageQueue_.front());
             messageQueue_.pop_front();
         }
     }
@@ -86,8 +80,8 @@ void* ChatClient::readLoop()
 {
     string msg;
     while (runSignal_) {
-        if (clientSocket_->canRecv(SLEEP_DELAY)) {
-            msg = clientSocket_->recvString();
+        if (clientSocket_.canRecv(SLEEP_DELAY)) {
+            msg = clientSocket_.recvString();
             messageQueue_.push_back(msg);
             usleep(SLEEP_DELAY);
         }
@@ -110,20 +104,11 @@ void* ChatClient::writeLoop()
                 return 0;
             }
 
-            clientSocket_->sendString(username_ + ": " + outMsg + '\n');
+            clientSocket_.sendString(username_ + ": " + outMsg + '\n');
 
             outMsg.clear();
             memset(outBuff, 0, OUT_BUFFER_SIZE);
         }
-    }
-}
-
-bool ChatClient::isSameMessage(const string msg) const
-{
-    if (msg.find(username_) != string::npos) {
-		return true;
-	} else {
-		return false;
     }
 }
 

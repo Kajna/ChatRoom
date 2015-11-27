@@ -15,7 +15,7 @@ void* doServerWrite(void* arg)
     return static_cast<ChatServer*>(arg)->writeLoop();
 }
 
-ChatServer::ChatServer() : serverSocket_(), runSignal_(true)
+ChatServer::ChatServer() : runSignal_(true)
 {
     serverSocket_.listen(DEFAULT_PORT);
 }
@@ -72,7 +72,10 @@ void* ChatServer::readLoop()
                 if (msg.empty() || msg.find(EXIT_CHAT_CMD) == 0) {
                     disconnectClient(client);
                 } else {
-                    messageQueue_.push_back(msg);
+                    Msg m;
+                    m.msg = msg;
+                    m.userId = client.getDescriptor();
+                    messageQueue_.push_back(m);
                     displayMessage("ChatLog: " + msg);
                 }
             }
@@ -87,12 +90,12 @@ void* ChatServer::writeLoop()
     while (runSignal_) {
         if (!messageQueue_.empty()) {
 
-            string msg = messageQueue_.front();
+            Msg msg = messageQueue_.front();
 
             queueMutex_.lock();
 
             for (auto &client : clients_) {
-                if (!client.sendString(msg)) {
+                if (client.getDescriptor() != msg.userId && !client.sendString(msg.msg)) {
                     queueMutex_.unlock();
                     disconnectClient(client);
                     queueMutex_.lock();

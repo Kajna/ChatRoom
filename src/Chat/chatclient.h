@@ -27,13 +27,15 @@ private:
 	void* displayLoop();
 	void* readLoop();
 	void* writeLoop();
-	bool isSameMessage(const string msg) const;
 	void displayMessage(const string msg) const;
 
     bool runSignal_;
-    TCPSocket *clientSocket_;
+    TCPSocket clientSocket_;
+
     deque<string> messageQueue_;
+
 	string server_, port_, username_, pass_;
+
 	Mutex exitMutex_;
 	Thread displayThread_, readThread_, writeThread_;
 };

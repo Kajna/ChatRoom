@@ -15,6 +15,11 @@
 
 using namespace std;
 
+typedef struct Msg {
+    int userId;
+    string msg;
+} Msg;
+
 class ChatServer
 {
 public:
@@ -37,7 +42,7 @@ private:
     bool runSignal_;
     TCPServerSocket serverSocket_;
 
-    deque<string> messageQueue_;
+    deque<Msg> messageQueue_;
     vector<TCPSocket> clients_;
     map<int, ChatUser> users_;
 	string name_;
