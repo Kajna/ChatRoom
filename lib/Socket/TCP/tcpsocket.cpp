@@ -79,10 +79,10 @@ bool TCPSocket::connectWithTimeout(string address, string port, int seconds, int
         getsockopt(socketFd_, SOL_SOCKET, SO_ERROR, &so_error, &len);
 
         if (so_error != 0) {
-            throw SocketException("Error while connecting socket (timeout) to: " + address + ":" + port);
+            throw SocketException("Error while connecting socket to: " + address + ":" + port);
         }
     } else {
-        throw SocketException("Error while connecting socket (timeout) to: " + address + ":" + port);
+        throw SocketException("Error while connecting socket to: " + address + ":" + port);
     }
 
     // Set to blocking mode again...
@@ -101,11 +101,9 @@ bool TCPSocket::canRecv(int timeout)
         throw SocketException("Error while pooling socket connection.");
     } else if (status == 0) {
         return false;
-    } else {
-        if (poolFd_.revents & POLLIN) {
-            poolFd_.revents = 0;
-            return true;
-        }
+    } else if (poolFd_.revents & POLLIN) {
+        poolFd_.revents = 0;
+        return true;
     }
     return false;
 }
@@ -138,6 +136,7 @@ std::string TCPSocket::recvString()
     if (recvAll(&len, sizeof len) != (sizeof len)) {
         return std::string();
     }
+
     // Receive the message
     len = ntohl(len);
     std::string msg(len, '\0');

@@ -32,18 +32,28 @@ void* ChatServer::acceptLoop()
 
         std::string port = to_string(client.getPort());
 
-        displayMessage("Client connected (IP: " + client.getAddress() + " Port: " + port.c_str() + ")\n");
+        displayMessage("User trying to connect (IP: " + client.getAddress() + ")\n");
 
         queueMutex_.lock();
 
-        client.sendString("---------------------------\n Welcome to chat room "
-        + name_
-        + "\n---------------------------\n");
+        std::string username = client.recvString();
 
-        serverSocket_.monitor(client);
-        client.setSendTimeout(1);
-        client.setRecvTimeout(1);
-        clients_.push_back(client);
+        if (!username.empty()) {
+            displayMessage("User " + username + " connected (IP: " + client.getAddress() + ")\n");
+
+            client.sendString("---------------------------\n Welcome to chat room "
+            + name_
+            + "\n---------------------------\n");
+
+            serverSocket_.monitor(client);
+            clients_.push_back(client);
+
+            ChatUser user(username);
+            user.ip_ = client.getAddress();
+
+            users_[client.getDescriptor()] = user;
+        }
+
         queueMutex_.unlock();
 
         usleep(SLEEP_DELAY);
@@ -129,15 +139,21 @@ void ChatServer::disconnectClient(TCPSocket &client)
 
     while (it != clients_.end()) {
         if (it->getDescriptor() == client.getDescriptor()) {
+            ChatUser user = users_[it->getDescriptor()];
+
             it = clients_.erase(it);
+
+            displayMessage("User " + user.username_ + " discontected (IP: " + user.ip_ + ")\n");
+
             break;
         } else {
             ++it;
         }
     }
-    queueMutex_.unlock();
 
-    displayMessage("Client disconected\n");
+
+
+    queueMutex_.unlock();
 }
 
 void ChatServer::displayMessage(const string msg)

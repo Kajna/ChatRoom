@@ -10,7 +10,7 @@ using namespace std;
 class TCPServerSocket : public BaseSocket
 {
 public:
-	explicit TCPServerSocket();
+	TCPServerSocket();
 
     void listen(string port, int backlog = 5);
 	TCPSocket accept();

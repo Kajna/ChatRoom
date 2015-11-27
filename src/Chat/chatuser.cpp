@@ -1,11 +1,13 @@
 #include "chatuser.h"
 
-ChatUser::ChatUser(TCPSocket &sock, string name) : sock_(std::move(sock)), name_(name)
+ChatUser::ChatUser()
 {
-    //ctor
+}
+
+ChatUser::ChatUser(string name) : username_(name)
+{
 }
 
 ChatUser::~ChatUser()
 {
-    //dtor
 }

@@ -1,6 +1,7 @@
 #ifndef CHAT_SERVER_H
 #define CHAT_SERVER_H
 
+#include <map>
 #include <deque>
 #include <vector>
 #include <iostream>
@@ -35,9 +36,12 @@ private:
 
     bool runSignal_;
     TCPServerSocket serverSocket_;
+
     deque<string> messageQueue_;
     vector<TCPSocket> clients_;
+    map<int, ChatUser> users_;
 	string name_;
+
 	Mutex queueMutex_;
     Thread acceptThread_, readThread_, writeThread_;
 };

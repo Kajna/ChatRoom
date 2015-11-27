@@ -45,8 +45,7 @@ TCPSocket TCPServerSocket::accept()
         throw SocketException("Error while trying to accept socket connection.");
     }
 
-    TCPSocket newSock(newSocketFd);
-    return newSock;
+    return TCPSocket(newSocketFd);
 }
 
 void TCPServerSocket::monitor(TCPSocket &fd)

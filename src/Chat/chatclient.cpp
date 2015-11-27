@@ -43,6 +43,9 @@ bool ChatClient::login(string user, string pass)
     username_ = user;
     pass_ = pass;
 
+    // Login
+    clientSocket_->sendString(username_);
+
     // Start threads
     displayThread_.start(&doDisplay, this);
     readThread_.start(&doRead, this);
