@@ -141,17 +141,19 @@ void ChatServer::disconnectClient(TCPSocket &client)
 {
     queueMutex_.lock();
 
-    serverSocket_.unmonitor(client);
-
-    client.close();
-
     std::vector<TCPSocket>::iterator it = clients_.begin();
 
     while (it != clients_.end()) {
         if (it->getDescriptor() == client.getDescriptor()) {
             ChatUser user = users_[it->getAddress() + ":" + to_string(it->getDescriptor())];
-            it = clients_.erase(it);
+
             displayMessage("User " + user.username_ + " disconected (IP: " + user.ip_ + ")\n");
+
+            it = clients_.erase(it);
+            users_.erase(it->getAddress() + ":" + to_string(it->getDescriptor()));
+
+            serverSocket_.unmonitor(client);
+            client.close();
             break;
         } else {
             ++it;
