@@ -104,7 +104,7 @@ void* ChatClient::writeLoop()
                 return 0;
             }
 
-            clientSocket_.sendString(username_ + ": " + outMsg + '\n');
+            clientSocket_.sendString(outMsg);
 
             outMsg.clear();
             memset(outBuff, 0, OUT_BUFFER_SIZE);

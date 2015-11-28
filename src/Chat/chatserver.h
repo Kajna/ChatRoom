@@ -2,11 +2,11 @@
 #define CHAT_SERVER_H
 
 #include <map>
+#include <ctime>
 #include <deque>
 #include <vector>
 #include <iostream>
 
-#include "chatuser.h"
 #include "chatconfig.h"
 
 #include "../../lib/Thread/mutex.h"
@@ -16,9 +16,26 @@
 using namespace std;
 
 typedef struct Msg {
-    int userId;
-    string msg;
-} Msg;
+    Msg() {}
+    Msg(int sock_id, string msg)
+    {
+        sock_id_ = sock_id;
+        msg_ = msg;
+    }
+    int sock_id_;
+    string msg_;
+} ChatMsg;
+
+typedef struct Usr {
+    Usr() {}
+    Usr(string id, string username, string ip)
+    {
+        sock_id_ = id;
+        ip_ = ip;
+        username_ = username;
+    }
+    string sock_id_, ip_, username_;
+} ChatUser;
 
 class ChatServer
 {
@@ -42,10 +59,12 @@ private:
     bool runSignal_;
     TCPServerSocket serverSocket_;
 
-    deque<Msg> messageQueue_;
+    deque<ChatMsg> messageQueue_;
     vector<TCPSocket> clients_;
-    map<int, ChatUser> users_;
+    map<string, ChatUser> users_;
 	string name_;
+
+	const std::string currentDateTime();
 
 	Mutex queueMutex_;
     Thread acceptThread_, readThread_, writeThread_;

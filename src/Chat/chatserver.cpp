@@ -48,10 +48,11 @@ void* ChatServer::acceptLoop()
             serverSocket_.monitor(client);
             clients_.push_back(client);
 
-            ChatUser user(username);
-            user.ip_ = client.getAddress();
+            ChatUser user(to_string(client.getDescriptor()), username, client.getAddress());
 
-            users_[client.getDescriptor()] = user;
+            users_[user.ip_ + ":" + user.sock_id_] = user;
+        } else {
+            client.close();
         }
 
         queueMutex_.unlock();
@@ -72,11 +73,17 @@ void* ChatServer::readLoop()
                 if (msg.empty() || msg.find(EXIT_CHAT_CMD) == 0) {
                     disconnectClient(client);
                 } else {
-                    Msg m;
-                    m.msg = msg;
-                    m.userId = client.getDescriptor();
+                    ChatMsg m(client.getDescriptor(),
+                    "["
+                    + currentDateTime()
+                    + "] "
+                    + "<"
+                    + users_[client.getAddress() + ":" + to_string(client.getDescriptor())].username_
+                    + "> "
+                    + msg
+                    + "\n");
                     messageQueue_.push_back(m);
-                    displayMessage("ChatLog: " + msg);
+                    displayMessage(m.msg_);
                 }
             }
             events.empty();
@@ -90,12 +97,12 @@ void* ChatServer::writeLoop()
     while (runSignal_) {
         if (!messageQueue_.empty()) {
 
-            Msg msg = messageQueue_.front();
+            ChatMsg msg = messageQueue_.front();
 
             queueMutex_.lock();
 
             for (auto &client : clients_) {
-                if (client.getDescriptor() != msg.userId && !client.sendString(msg.msg)) {
+                if (client.getDescriptor() != msg.sock_id_ && !client.sendString(msg.msg_)) {
                     queueMutex_.unlock();
                     disconnectClient(client);
                     queueMutex_.lock();
@@ -142,19 +149,14 @@ void ChatServer::disconnectClient(TCPSocket &client)
 
     while (it != clients_.end()) {
         if (it->getDescriptor() == client.getDescriptor()) {
-            ChatUser user = users_[it->getDescriptor()];
-
+            ChatUser user = users_[it->getAddress() + ":" + to_string(it->getDescriptor())];
             it = clients_.erase(it);
-
-            displayMessage("User " + user.username_ + " discontected (IP: " + user.ip_ + ")\n");
-
+            displayMessage("User " + user.username_ + " disconected (IP: " + user.ip_ + ")\n");
             break;
         } else {
             ++it;
         }
     }
-
-
 
     queueMutex_.unlock();
 }
@@ -162,4 +164,17 @@ void ChatServer::disconnectClient(TCPSocket &client)
 void ChatServer::displayMessage(const string msg)
 {
     cout << msg;
+}
+
+const std::string ChatServer::currentDateTime()
+{
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&now);
+    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
+    // for more information about date/time format %Y-%m-%d.
+    strftime(buf, sizeof(buf), "%X", &tstruct);
+
+    return buf;
 }
