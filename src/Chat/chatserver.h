@@ -17,24 +17,22 @@ using namespace std;
 
 typedef struct Msg {
     Msg() {}
-    Msg(int sock_id, string msg)
-    {
-        sock_id_ = sock_id;
-        msg_ = msg;
+    Msg(int sock_id, string msg) {
+        m_sock_id = sock_id;
+        m_msg = msg;
     }
-    int sock_id_;
-    string msg_;
+    int m_sock_id;
+    string m_msg;
 } ChatMsg;
 
 typedef struct Usr {
     Usr() {}
-    Usr(string id, string username, string ip)
-    {
-        sock_id_ = id;
-        ip_ = ip;
-        username_ = username;
+    Usr(string id, string username, string ip) {
+        m_sock_id = id;
+        m_ip = ip;
+        m_username = username;
     }
-    string sock_id_, ip_, username_;
+    string m_sock_id, m_ip, m_username;
 } ChatUser;
 
 class ChatServer
@@ -53,21 +51,21 @@ private:
 	void* readLoop();
 	void* writeLoop();
 
-	void disconnectClient(TCPSocket &client);
     void displayMessage(const string msg);
+	void disconnectClient(TCPSocket &client);
 
-    bool runSignal_;
-    TCPServerSocket serverSocket_;
+    const std::string currentDateTime();
 
-    deque<ChatMsg> messageQueue_;
-    vector<TCPSocket> clients_;
-    map<string, ChatUser> users_;
-	string name_;
+    bool m_run_signal;
+    TCPServerSocket m_server_socket;
 
-	const std::string currentDateTime();
+    string m_room_name;
+    deque<ChatMsg> m_message_queue;
+    vector<TCPSocket> m_clients;
+    map<string, ChatUser> m_users;
 
-	Mutex queueMutex_;
-    Thread acceptThread_, readThread_, writeThread_;
+	Mutex m_queue_mutex;
+    Thread m_accept_thread, m_read_thread, m_write_thread;
 };
 
 #endif // CHAT_SERVER_H

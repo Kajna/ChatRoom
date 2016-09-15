@@ -1,11 +1,11 @@
 #include "socketexception.h"
 
 SocketException::SocketException(const string &message)
-	throw() : userMessage_(message) {
+	throw() : m_user_message(message) {
 }
 
 SocketException::~SocketException() throw() {}
 
 const char *SocketException::what() const throw() {
-	return userMessage_.c_str();
+	return m_user_message.c_str();
 }

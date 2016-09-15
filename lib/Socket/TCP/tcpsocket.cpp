@@ -2,8 +2,8 @@
 
 TCPSocket::TCPSocket(int fd) : BaseSocket(fd)
 {
-    poolFd_.fd = socketFd_;
-    poolFd_.events = POLLIN;
+    m_pool_fd.fd = m_socket_fd;
+    m_pool_fd.events = POLLIN;
 }
 
 TCPSocket::TCPSocket() : BaseSocket(AF_INET, SOCK_STREAM, AF_UNSPEC)
@@ -27,7 +27,7 @@ bool TCPSocket::connect(string address, string port)
 		throw SocketException(gai_strerror(status));
 	}
 
-    status = ::connect(socketFd_, hostsInfoList->ai_addr, hostsInfoList->ai_addrlen);
+    status = ::connect(m_socket_fd, hostsInfoList->ai_addr, hostsInfoList->ai_addrlen);
 
     freeaddrinfo(hostsInfoList);
 
@@ -35,8 +35,8 @@ bool TCPSocket::connect(string address, string port)
         throw SocketException("Error while connecting socket to: " + address + ":" + port);
     }
 
-    poolFd_.fd = socketFd_;
-    poolFd_.events = POLLIN;
+    m_pool_fd.fd = m_socket_fd;
+    m_pool_fd.events = POLLIN;
 }
 
 bool TCPSocket::connectWithTimeout(string address, string port, int seconds, int microseconds)
@@ -61,22 +61,22 @@ bool TCPSocket::connectWithTimeout(string address, string port, int seconds, int
 		throw SocketException(gai_strerror(status));
 	}
 
-    ::connect(socketFd_, hostsInfoList->ai_addr, hostsInfoList->ai_addrlen);
+    ::connect(m_socket_fd, hostsInfoList->ai_addr, hostsInfoList->ai_addrlen);
 
     freeaddrinfo(hostsInfoList);
 
     FD_ZERO(&fdset);
-    FD_SET(socketFd_, &fdset);
+    FD_SET(m_socket_fd, &fdset);
 
     tv.tv_sec = seconds;
     tv.tv_usec = microseconds;
 
-    if (select(socketFd_ + 1, NULL, &fdset, NULL, &tv) == 1) {
+    if (select(m_socket_fd + 1, NULL, &fdset, NULL, &tv) == 1) {
         int so_error;
 
         socklen_t len = sizeof so_error;
 
-        getsockopt(socketFd_, SOL_SOCKET, SO_ERROR, &so_error, &len);
+        getsockopt(m_socket_fd, SOL_SOCKET, SO_ERROR, &so_error, &len);
 
         if (so_error != 0) {
             throw SocketException("Error while connecting socket to: " + address + ":" + port);
@@ -88,21 +88,21 @@ bool TCPSocket::connectWithTimeout(string address, string port, int seconds, int
     // Set to blocking mode again...
     setBlocking();
 
-    poolFd_.fd = socketFd_;
-    poolFd_.events = POLLIN;
+    m_pool_fd.fd = m_socket_fd;
+    m_pool_fd.events = POLLIN;
 }
 
 
 bool TCPSocket::canRecv(int timeout)
 {
-    int status = poll(&poolFd_, 1, timeout);
+    int status = poll(&m_pool_fd, 1, timeout);
 
     if (status == -1) {
         throw SocketException("Error while pooling socket connection.");
     } else if (status == 0) {
         return false;
-    } else if (poolFd_.revents & POLLIN) {
-        poolFd_.revents = 0;
+    } else if (m_pool_fd.revents & POLLIN) {
+        m_pool_fd.revents = 0;
         return true;
     }
     return false;
@@ -110,14 +110,14 @@ bool TCPSocket::canRecv(int timeout)
 
 size_t TCPSocket::recv(void *buff, size_t buffLen)
 {
-    return ::recv(socketFd_, (rawType *)buff, buffLen, 0);
+    return ::recv(m_socket_fd, (rawType *)buff, buffLen, 0);
 }
 
 size_t TCPSocket::recvAll(void *buff, size_t buffLen)
 {
     size_t result, total = 0;
     while (total < buffLen) {
-        result = ::recv(socketFd_, (rawType *)buff, buffLen, 0);
+        result = ::recv(m_socket_fd, (rawType *)buff, buffLen, 0);
         if (result < 0) {
             throw SocketException("Error while receiving data from socket.");
         } else if (result == 0) {
@@ -150,14 +150,14 @@ std::string TCPSocket::recvString()
 
 size_t TCPSocket::send(void const *buff, size_t buffLen)
 {
-    return ::recv(socketFd_, (rawType *)buff, buffLen, 0);
+    return ::recv(m_socket_fd, (rawType *)buff, buffLen, 0);
 }
 
 size_t TCPSocket::sendAll(void const *buff, size_t buffLen)
 {
     size_t result, total = 0;
     while (total < buffLen) {
-        result = ::send(socketFd_, (rawType *)buff, buffLen, 0);
+        result = ::send(m_socket_fd, (rawType *)buff, buffLen, 0);
         if (result < 0) {
             throw SocketException("Error while sending data to socket.");
         } else if (result == 0) {
@@ -196,7 +196,7 @@ bool TCPSocket::setSendTimeout(int seconds, int microseconds)
     timeout.tv_sec = seconds;
     timeout.tv_usec = microseconds;
 
-    if (setsockopt (socketFd_, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+    if (setsockopt (m_socket_fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
         return false;
     }
     return true;
@@ -208,7 +208,7 @@ bool TCPSocket::setRecvTimeout(int seconds, int microseconds)
     timeout.tv_sec = seconds;
     timeout.tv_usec = microseconds;
 
-    if (setsockopt (socketFd_, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+    if (setsockopt (m_socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
         return false;
     }
 

@@ -15,63 +15,62 @@ void* doWrite(void* arg)
     return static_cast<ChatClient*>(arg)->writeLoop();
 }
 
-ChatClient::ChatClient(string server, string port) : runSignal_(true)
+ChatClient::ChatClient(string server, string port) : m_run_signal(true)
 {
-    server_ = server;
-    port_ = port;
+    m_server = server;
+    m_port = port;
 
-    clientSocket_.connectWithTimeout(server.c_str(), port.c_str(), 5, 0);
+    m_client_socket.connectWithTimeout(server.c_str(), port.c_str(), 5, 0);
 }
 
 ChatClient::~ChatClient()
 {
-    if (runSignal_) {
-        exitMutex_.lock();
-        clientSocket_.sendString(EXIT_CHAT_CMD);
-        clientSocket_.close();
-        runSignal_ = false;
-        exitMutex_.unlock();
+    if (m_run_signal) {
+        m_exit_mutex.lock();
+        m_client_socket.sendString(EXIT_CHAT_CMD);
+        m_client_socket.close();
+        m_run_signal = false;
+        m_exit_mutex.unlock();
     }
 }
 
-bool ChatClient::login(string user, string pass)
+bool ChatClient::login(string user)
 {
-    // Store user name password
-    username_ = user;
-    pass_ = pass;
+    // Store user name
+    m_username = user;
 
     // Send greeting message
-    clientSocket_.sendString(username_);
+    m_client_socket.sendString(m_username);
 
     // Start threads
-    displayThread_.start(&doDisplay, this);
-    readThread_.start(&doRead, this);
-    writeThread_.start(&doWrite, this);
+    m_display_thread.start(&doDisplay, this);
+    m_read_thread.start(&doRead, this);
+    m_write_thread.start(&doWrite, this);
 
-    readThread_.join();
-    writeThread_.join();
-    displayThread_.join();
+    m_read_thread.join();
+    m_write_thread.join();
+    m_display_thread.join();
 
-    clientSocket_.close();
+    m_client_socket.close();
 
     displayMessage("---------------------------\nConnection to server closed\n---------------------------\n");
 }
 
 void ChatClient::logout()
 {
-    clientSocket_.sendString(EXIT_CHAT_CMD);
-    exitMutex_.lock();
-    runSignal_ = false;
-    exitMutex_.unlock();
+    m_client_socket.sendString(EXIT_CHAT_CMD);
+    m_exit_mutex.lock();
+    m_run_signal = false;
+    m_exit_mutex.unlock();
 }
 
 void* ChatClient::displayLoop()
 {
     string msg;
-    while (runSignal_) {
-        if (!messageQueue_.empty()) {
-            displayMessage(messageQueue_.front());
-            messageQueue_.pop_front();
+    while (m_run_signal) {
+        if (!m_message_queue.empty()) {
+            displayMessage(m_message_queue.front());
+            m_message_queue.pop_front();
         }
     }
 }
@@ -79,10 +78,10 @@ void* ChatClient::displayLoop()
 void* ChatClient::readLoop()
 {
     string msg;
-    while (runSignal_) {
-        if (clientSocket_.canRecv(SLEEP_DELAY)) {
-            msg = clientSocket_.recvString();
-            messageQueue_.push_back(msg);
+    while (m_run_signal) {
+        if (m_client_socket.canRecv(SLEEP_DELAY)) {
+            msg = m_client_socket.recvString();
+            m_message_queue.push_back(msg);
             usleep(SLEEP_DELAY);
         }
     }
@@ -93,7 +92,7 @@ void* ChatClient::writeLoop()
     string outMsg;
     char outBuff[OUT_BUFFER_SIZE] = {0};
 
-    while (runSignal_) {
+    while (m_run_signal) {
         cin.getline(outBuff, OUT_BUFFER_SIZE);
 
         outMsg = (string)outBuff;
@@ -104,7 +103,7 @@ void* ChatClient::writeLoop()
                 return 0;
             }
 
-            clientSocket_.sendString(outMsg);
+            m_client_socket.sendString(outMsg);
 
             outMsg.clear();
             memset(outBuff, 0, OUT_BUFFER_SIZE);

@@ -18,7 +18,7 @@ public:
 	void unmonitor(TCPSocket &fd);
 	vector<TCPSocket> getEvents(int timeout = 10000);
 private:
-    vector<struct pollfd> monitorFd_;
+    vector<struct pollfd> m_monitor_fds;
 };
 
 #endif // TCP_SERVER_SOCKET_H

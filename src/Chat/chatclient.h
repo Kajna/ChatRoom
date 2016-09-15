@@ -17,7 +17,7 @@ class ChatClient
 public:
 	ChatClient(string server, string port = DEFAULT_PORT);
 	~ChatClient();
-	bool login(string username, string pass);
+	bool login(string username);
 	void logout();
 
 	friend void* doDisplay(void* arg);
@@ -29,15 +29,15 @@ private:
 	void* writeLoop();
 	void displayMessage(const string msg) const;
 
-    bool runSignal_;
-    TCPSocket clientSocket_;
+    bool m_run_signal;
+    TCPSocket m_client_socket;
 
-    deque<string> messageQueue_;
+    deque<string> m_message_queue;
 
-	string server_, port_, username_, pass_;
+	string m_server, m_port, m_username;
 
-	Mutex exitMutex_;
-	Thread displayThread_, readThread_, writeThread_;
+	Mutex m_exit_mutex;
+	Thread m_display_thread, m_read_thread, m_write_thread;
 };
 
 #endif // CHAT_CLIENT_H

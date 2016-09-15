@@ -38,8 +38,8 @@ public:
 
 	int getLastErrorCode();
 protected:
-    int socketFd_;
-    bool isClosed_;
+    int m_socket_fd;
+    bool m_is_closed;
 };
 
 #endif // BASE_SOCKET_H

@@ -1,36 +1,36 @@
 #include "mutex.h"
 
-Mutex::Mutex() : locked_(false)
+Mutex::Mutex() : m_locked(false)
 {
-    pthread_mutex_init(&mutex_, NULL);
+    pthread_mutex_init(&m_mutex, NULL);
 }
 
 Mutex::~Mutex()
 {
-    while(locked_);
+    while(m_locked);
     unlock(); // Unlock Mutex after shared resource is safe
-    pthread_mutex_destroy(&mutex_);
+    pthread_mutex_destroy(&m_mutex);
 }
 
 void Mutex::lock()
 {
-    pthread_mutex_lock(&mutex_);
-    locked_ = true;
+    pthread_mutex_lock(&m_mutex);
+    m_locked = true;
 }
 
 void Mutex::unlock()
 {
-    locked_ = false; // do it BEFORE unlocking to avoid race condition
-    pthread_mutex_unlock(&mutex_);
+    m_locked = false; // do it BEFORE unlocking to avoid race condition
+    pthread_mutex_unlock(&m_mutex);
 }
 
 pthread_mutex_t* Mutex::getMutexPtr()
 {
-    return &mutex_;
+    return &m_mutex;
 }
 
 bool Mutex::isLocked() const
 {
-    return locked_;
+    return m_locked;
 }
 

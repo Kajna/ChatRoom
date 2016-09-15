@@ -12,7 +12,7 @@ public:
     void signal();
     void broadcast();
 private:
-    pthread_cond_t conditional_;
+    pthread_cond_t m_conditional;
 };
 
 #endif // CONDITIONAL_H

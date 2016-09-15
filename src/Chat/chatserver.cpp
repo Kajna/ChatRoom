@@ -15,9 +15,9 @@ void* doServerWrite(void* arg)
     return static_cast<ChatServer*>(arg)->writeLoop();
 }
 
-ChatServer::ChatServer() : runSignal_(true)
+ChatServer::ChatServer() : m_run_signal(true)
 {
-    serverSocket_.listen(DEFAULT_PORT);
+    m_server_socket.listen(DEFAULT_PORT);
 }
 
 ChatServer::~ChatServer()
@@ -27,14 +27,14 @@ ChatServer::~ChatServer()
 
 void* ChatServer::acceptLoop()
 {
-    while (runSignal_) {
-        TCPSocket client = serverSocket_.accept();
+    while (m_run_signal) {
+        TCPSocket client = m_server_socket.accept();
 
         std::string port = to_string(client.getPort());
 
         displayMessage("User trying to connect (IP: " + client.getAddress() + ")\n");
 
-        queueMutex_.lock();
+        m_queue_mutex.lock();
 
         std::string username = client.recvString();
 
@@ -42,20 +42,20 @@ void* ChatServer::acceptLoop()
             displayMessage("User " + username + " connected (IP: " + client.getAddress() + ")\n");
 
             client.sendString("---------------------------\n Welcome to chat room "
-            + name_
+            + m_room_name
             + "\n---------------------------\n");
 
-            serverSocket_.monitor(client);
-            clients_.push_back(client);
+            m_server_socket.monitor(client);
+            m_clients.push_back(client);
 
             ChatUser user(to_string(client.getDescriptor()), username, client.getAddress());
 
-            users_[user.ip_ + ":" + user.sock_id_] = user;
+            m_users[user.m_ip + ":" + user.m_sock_id] = user;
         } else {
             client.close();
         }
 
-        queueMutex_.unlock();
+        m_queue_mutex.unlock();
 
         usleep(SLEEP_DELAY);
     }
@@ -63,10 +63,10 @@ void* ChatServer::acceptLoop()
 
 void* ChatServer::readLoop()
 {
-    while (runSignal_) {
-        if (!clients_.empty()) {
+    while (m_run_signal) {
+        if (!m_clients.empty()) {
 
-            vector<TCPSocket> events = serverSocket_.getEvents(SLEEP_DELAY);
+            vector<TCPSocket> events = m_server_socket.getEvents(SLEEP_DELAY);
 
             for (auto &client: events) {
                 string msg = client.recvString();
@@ -78,12 +78,12 @@ void* ChatServer::readLoop()
                     + currentDateTime()
                     + "] "
                     + "<"
-                    + users_[client.getAddress() + ":" + to_string(client.getDescriptor())].username_
+                    + m_users[client.getAddress() + ":" + to_string(client.getDescriptor())].m_username
                     + "> "
                     + msg
                     + "\n");
-                    messageQueue_.push_back(m);
-                    displayMessage(m.msg_);
+                    m_message_queue.push_back(m);
+                    displayMessage(m.m_msg);
                 }
             }
             events.empty();
@@ -94,24 +94,24 @@ void* ChatServer::readLoop()
 
 void* ChatServer::writeLoop()
 {
-    while (runSignal_) {
-        if (!messageQueue_.empty()) {
+    while (m_run_signal) {
+        if (!m_message_queue.empty()) {
 
-            ChatMsg msg = messageQueue_.front();
+            ChatMsg msg = m_message_queue.front();
 
-            queueMutex_.lock();
+            m_queue_mutex.lock();
 
-            for (auto &client : clients_) {
-                if (client.getDescriptor() != msg.sock_id_ && !client.sendString(msg.msg_)) {
-                    queueMutex_.unlock();
+            for (auto &client : m_clients) {
+                if (client.getDescriptor() != msg.m_sock_id && !client.sendString(msg.m_msg)) {
+                    m_queue_mutex.unlock();
                     disconnectClient(client);
-                    queueMutex_.lock();
+                    m_queue_mutex.lock();
                 }
             }
 
-            messageQueue_.pop_front();
+            m_message_queue.pop_front();
 
-            queueMutex_.unlock();
+            m_queue_mutex.unlock();
         }
         usleep(SLEEP_DELAY);
     }
@@ -119,40 +119,40 @@ void* ChatServer::writeLoop()
 
 void ChatServer::start(string name)
 {
-    name_ = name;
+    m_room_name = name;
 
     displayMessage("---------------------------\nChat room server is running... \n---------------------------\n");
 
     // Start threads
-    acceptThread_.start(&doServerAccept, this);
-    readThread_.start(&doServerRead, this);
-    writeThread_.start(&doServerWrite, this);
+    m_accept_thread.start(&doServerAccept, this);
+    m_read_thread.start(&doServerRead, this);
+    m_write_thread.start(&doServerWrite, this);
 
-    writeThread_.join();
-    readThread_.join();
-    acceptThread_.join();
+    m_write_thread.join();
+    m_read_thread.join();
+    m_accept_thread.join();
 
-    serverSocket_.close();
+    m_server_socket.close();
 
     displayMessage("Server closed\n");
 }
 
 void ChatServer::disconnectClient(TCPSocket &client)
 {
-    queueMutex_.lock();
+    m_queue_mutex.lock();
 
-    std::vector<TCPSocket>::iterator it = clients_.begin();
+    std::vector<TCPSocket>::iterator it = m_clients.begin();
 
-    while (it != clients_.end()) {
+    while (it != m_clients.end()) {
         if (it->getDescriptor() == client.getDescriptor()) {
-            ChatUser user = users_[it->getAddress() + ":" + to_string(it->getDescriptor())];
+            ChatUser user = m_users[it->getAddress() + ":" + to_string(it->getDescriptor())];
 
-            displayMessage("User " + user.username_ + " disconected (IP: " + user.ip_ + ")\n");
+            displayMessage("User " + user.m_username + " disconected (IP: " + user.m_ip + ")\n");
 
-            it = clients_.erase(it);
-            users_.erase(it->getAddress() + ":" + to_string(it->getDescriptor()));
+            it = m_clients.erase(it);
+            m_users.erase(it->getAddress() + ":" + to_string(it->getDescriptor()));
 
-            serverSocket_.unmonitor(client);
+            m_server_socket.unmonitor(client);
             client.close();
             break;
         } else {
@@ -160,7 +160,7 @@ void ChatServer::disconnectClient(TCPSocket &client)
         }
     }
 
-    queueMutex_.unlock();
+    m_queue_mutex.unlock();
 }
 
 void ChatServer::displayMessage(const string msg)

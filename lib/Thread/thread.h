@@ -13,8 +13,8 @@ public:
     void exit();
     bool isRunning() const;
 protected:
-    bool running_;
-    pthread_t thread_;
+    bool m_running;
+    pthread_t m_thread;
 };
 
 #endif // THREAD_H

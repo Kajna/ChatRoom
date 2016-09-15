@@ -14,7 +14,7 @@ public:
 	const char *what() const throw();
 
 private:
-	string userMessage_;  // Exception message
+	string m_user_message;  // Exception message
 };
 
 #endif // SOCKETEXCEPTION_H

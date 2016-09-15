@@ -13,7 +13,7 @@ public:
     bool isLocked() const;
     pthread_mutex_t* getMutexPtr();
 private:
-    pthread_mutex_t mutex_;
-    volatile bool locked_;
+    pthread_mutex_t m_mutex;
+    volatile bool m_locked;
 };
 #endif // MUTEX_H

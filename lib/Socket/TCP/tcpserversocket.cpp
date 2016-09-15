@@ -22,13 +22,13 @@ void TCPServerSocket::listen(string port, int backlog)
 	}
 
     int yes = 1;
-	setsockopt(socketFd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+	setsockopt(m_socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
-	if (::bind(socketFd_, hostsInfoList->ai_addr, hostsInfoList->ai_addrlen) == -1) {
+	if (::bind(m_socket_fd, hostsInfoList->ai_addr, hostsInfoList->ai_addrlen) == -1) {
 		throw SocketException("Error while binding socket to port: " + port);
 	}
 
-	if (::listen(socketFd_, backlog) == -1) {
+	if (::listen(m_socket_fd, backlog) == -1) {
 		throw SocketException("Error while trying to listen for connections.");
 	}
 }
@@ -39,7 +39,7 @@ TCPSocket TCPServerSocket::accept()
 
     socklen_t clientAddrSize = sizeof(clientAddr);
 
-    int newSocketFd = ::accept(socketFd_, (struct sockaddr *)&clientAddr, &clientAddrSize);
+    int newSocketFd = ::accept(m_socket_fd, (struct sockaddr *)&clientAddr, &clientAddrSize);
 
     if (newSocketFd == -1) {
         throw SocketException("Error while trying to accept socket connection.");
@@ -55,16 +55,16 @@ void TCPServerSocket::monitor(TCPSocket &fd)
     poolFd.fd = fd.getDescriptor();
     poolFd.events = POLLIN;
 
-	monitorFd_.push_back(poolFd);
+	m_monitor_fds.push_back(poolFd);
 }
 
 void TCPServerSocket::unmonitor(TCPSocket &fd)
 {
-    vector<struct pollfd>::iterator it = monitorFd_.begin();
+    vector<struct pollfd>::iterator it = m_monitor_fds.begin();
 
-    while (it != monitorFd_.end()) {
+    while (it != m_monitor_fds.end()) {
         if (it->fd == fd.getDescriptor()) {
-            it = monitorFd_.erase(it);
+            it = m_monitor_fds.erase(it);
             break;
         } else {
             ++it;
@@ -76,17 +76,17 @@ vector<TCPSocket> TCPServerSocket::getEvents(int timeout)
 {
     vector<TCPSocket> events;
 
-    int status = poll(&monitorFd_[0], monitorFd_.size(), timeout);
+    int status = poll(&m_monitor_fds[0], m_monitor_fds.size(), timeout);
 
     if (status == -1) {
         throw SocketException("Error while pooling socket connection.");
     } else if (status == 0) {
         return events;
     } else {
-    	for (auto poolFd : monitorFd_) {
-            if (poolFd.revents & POLLIN) {
-                poolFd.revents = 0;
-                TCPSocket sock(static_cast<int>(poolFd.fd));
+    	for (auto pool_fd : m_monitor_fds) {
+            if (pool_fd.revents & POLLIN) {
+                pool_fd.revents = 0;
+                TCPSocket sock(static_cast<int>(pool_fd.fd));
                 events.push_back(sock);
             }
         }

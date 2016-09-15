@@ -45,12 +45,14 @@ private:
     void* execute();
     friend void* doExecute(void* arg);
 
-    int poolMaxSize_, queuedTasks_, taskLimit_;
-    Mutex taskMutex_;
-    Conditional tasksConditional_;
-    std::vector<Thread> workerThreads_;
-    std::deque<Task*> tasks_;
-    PoolState poolState_;
+    int m_pool_max_size, m_queued_tasks, m_task_limit;
+
+    Mutex m_task_mutex;
+    Conditional m_tasks_conditional;
+
+    PoolState m_pool_state;
+    std::deque<Task*> m_tasks;
+    std::vector<Thread> m_worker_threads;
 };
 
 #endif // WORKERPOOL_H

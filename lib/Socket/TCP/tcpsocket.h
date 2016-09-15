@@ -26,7 +26,7 @@ public:
 	bool setSendTimeout(int seconds = 3, int microseconds = 0);
 	bool setRecvTimeout(int seconds = 3, int microseconds = 0);
 private:
-    struct pollfd poolFd_;
+    struct pollfd m_pool_fd;
 };
 
 #endif // TCP_SOCKET_H

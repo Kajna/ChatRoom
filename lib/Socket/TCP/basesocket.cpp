@@ -1,33 +1,33 @@
 #include "basesocket.h"
 
-BaseSocket::BaseSocket(int family, int type, int flag) : isClosed_(false)
+BaseSocket::BaseSocket(int family, int type, int flag) : m_is_closed(false)
 {
-    socketFd_ = ::socket(family, type, flag);
-	if (socketFd_ == -1) {
+    m_socket_fd = ::socket(family, type, flag);
+	if (m_socket_fd == -1) {
 		throw SocketException("Error while creating socket.");
 	}
 }
 
-BaseSocket::BaseSocket(int fd) : socketFd_(fd), isClosed_(false)
+BaseSocket::BaseSocket(int fd) : m_socket_fd(fd), m_is_closed(false)
 {
 
 }
 
 bool BaseSocket::operator==(const BaseSocket& rhs) const
 {
-    return socketFd_ == rhs.socketFd_;
+    return m_socket_fd == rhs.m_socket_fd;
 }
 
 int BaseSocket::getDescriptor() const
 {
-	return socketFd_;
+	return m_socket_fd;
 }
 
 void BaseSocket::close()
 {
-    if (isClosed_ == false) {
-        ::close(socketFd_);
-        isClosed_ = true;
+    if (m_is_closed == false) {
+        ::close(m_socket_fd);
+        m_is_closed = true;
     }
 }
 
@@ -36,7 +36,7 @@ string BaseSocket::getAddress() const
     sockaddr_in addr;
     uint32_t addr_len = sizeof(addr);
 
-    if (getpeername(socketFd_, (sockaddr *) &addr,(socklen_t *) &addr_len) < 0) {
+    if (getpeername(m_socket_fd, (sockaddr *) &addr,(socklen_t *) &addr_len) < 0) {
         throw SocketException("Fetch of foreign address failed,");
     }
 
@@ -49,7 +49,7 @@ uint32_t BaseSocket::getPort() const
     sockaddr_in addr;
     uint32_t addr_len = sizeof(addr);
 
-    if (getpeername(socketFd_, (sockaddr *) &addr, (socklen_t *) &addr_len) < 0) {
+    if (getpeername(m_socket_fd, (sockaddr *) &addr, (socklen_t *) &addr_len) < 0) {
         throw SocketException("Fetch of foreign port failed.");
     }
     return ntohs(addr.sin_port);
@@ -57,33 +57,33 @@ uint32_t BaseSocket::getPort() const
 
 bool BaseSocket::setBlocking()
 {
-    int arg = fcntl(socketFd_, F_GETFL, NULL);
+    int arg = fcntl(m_socket_fd, F_GETFL, NULL);
     arg &= (~O_NONBLOCK);
-    fcntl(socketFd_, F_SETFL, arg);
+    fcntl(m_socket_fd, F_SETFL, arg);
 }
 
 bool BaseSocket::setNonBlocking()
 {
-    int arg = fcntl(socketFd_, F_GETFL, NULL);
+    int arg = fcntl(m_socket_fd, F_GETFL, NULL);
     arg |= O_NONBLOCK;
-    fcntl(socketFd_, F_SETFL, arg);
+    fcntl(m_socket_fd, F_SETFL, arg);
 }
 
 bool BaseSocket::isClosed()
 {
-    if (!isClosed_) {
+    if (!m_is_closed) {
         int optval;
         socklen_t optlen = sizeof(optval);
 
-        int res = getsockopt(socketFd_, SOL_SOCKET, SO_ERROR, &optval, &optlen);
+        int res = getsockopt(m_socket_fd, SOL_SOCKET, SO_ERROR, &optval, &optlen);
 
         if (optval == 0 && res == 0) {
-            isClosed_ = false;
+            m_is_closed = false;
         } else {
-            isClosed_ = true;
+            m_is_closed = true;
         }
     }
-    return isClosed_;
+    return m_is_closed;
 }
 
 int BaseSocket::getLastErrorCode()

@@ -60,7 +60,7 @@ void startClient()
 
     ChatClient c(server, "5555");
 
-    c.login(user, "");
+    c.login(user);
 }
 
 void startServer()

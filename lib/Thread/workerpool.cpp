@@ -1,13 +1,13 @@
 #include "workerpool.h"
 
-WorkerPool::WorkerPool() : poolState_(PoolState::STOPPED), poolMaxSize_(DEFAULT_WORKER_COUNT)
+WorkerPool::WorkerPool() : m_pool_state(PoolState::STOPPED), m_pool_max_size(DEFAULT_WORKER_COUNT)
 {
 
 }
 
-WorkerPool::WorkerPool(int poolSize) : poolState_(PoolState::STOPPED)
+WorkerPool::WorkerPool(int poolSize) : m_pool_state(PoolState::STOPPED)
 {
-    poolMaxSize_ = poolSize;
+    m_pool_max_size = poolSize;
 }
 
 WorkerPool::~WorkerPool()
@@ -25,7 +25,7 @@ void* WorkerPool::execute()
     Task* task = 0;
 
     while(true) {
-        taskMutex_.lock();
+        m_task_mutex.lock();
 
         // We need to put pthread_cond_wait in a loop for two reasons:
         // 1. There can be spurious wakeups (due to signal/ENITR)
@@ -33,21 +33,21 @@ void* WorkerPool::execute()
         //    from a signal/broadcast and that thread can mess up the condition.
         //    So when the current thread wakes up the condition may no longer be
         //    actually true!
-        while ((poolState_ != PoolState::STOPPED) && (tasks_.empty())) {
+        while ((m_pool_state != PoolState::STOPPED) && (m_tasks.empty())) {
             // Wait until there is a task in the queue
             // Unlock mutex while wait, then lock it back when signaled
-            tasksConditional_.wait(taskMutex_);
+            m_tasks_conditional.wait(m_task_mutex);
         }
 
         // If the thread was woken up to notify process shutdown, return from here
-        if (poolState_ == PoolState::STOPPED) {
-            taskMutex_.unlock();
+        if (m_pool_state == PoolState::STOPPED) {
+            m_task_mutex.unlock();
             pthread_exit(NULL);
         }
 
-        task = tasks_.front();
-        tasks_.pop_front();
-        taskMutex_.unlock();
+        task = m_tasks.front();
+        m_tasks.pop_front();
+        m_task_mutex.unlock();
 
         // Execute the task
         task->execute();
@@ -59,34 +59,34 @@ void* WorkerPool::execute()
 
 bool WorkerPool::addTask(Task* task)
 {
-    taskMutex_.lock();
+    m_task_mutex.lock();
 
-    if (tasks_.size() + 1 > taskLimit_) {
-        taskMutex_.unlock();
+    if (m_tasks.size() + 1 > m_task_limit) {
+        m_task_mutex.unlock();
         return false;
     }
 
-    tasks_.push_back(task);
+    m_tasks.push_back(task);
 
      // Wake up one thread that is waiting for a task to be available
-    tasksConditional_.signal();
+    m_tasks_conditional.signal();
 
-    taskMutex_.unlock();
+    m_task_mutex.unlock();
 
     return true;
 }
 
 bool WorkerPool::addWorker()
 {
-    if (poolMaxSize_ == workerThreads_.size()) {
+    if (m_pool_max_size == m_worker_threads.size()) {
         return false;
     }
 
-    Thread tNew;
+    Thread new_thread;
 
-    tNew.start(&doExecute, this);
+    new_thread.start(&doExecute, this);
 
-    workerThreads_.push_back(tNew);
+    m_worker_threads.push_back(new_thread);
 
     return true;
 }
